@@ -3,15 +3,8 @@
 // ================== TLDEXTRACT ================== //
 
 const TLDEXTRACT = {};
-const SUFFIXURL = 'https://publicsuffix.org/list/public_suffix_list.dat';
 const SCHEME_RE = new RegExp('^([a-z0-9+.-]+:)?//', 'i');
-
-let tlds;
-(async url=>{
-    const response = await fetch(url);
-    const text = await response.text();
-    tlds = text.split('\n');
-})(SUFFIXURL);
+const SUFFIXURL = 'https://publicsuffix.org/list/public_suffix_list.dat';
 
 const _extract = (tlds, netloc) => {
     let ret;
@@ -80,6 +73,12 @@ TLDEXTRACT.extract = async (url, callback) => {
 
 // ================== TLDEXTRACT ================== //
 
+const gettlds = async url => {
+    const response = await fetch(url);
+    const text = await response.text();
+    tlds = text.split('\n');
+};
+
 const getip = async domain => {
     const response = await fetch(`http://ip-api.com/json/${domain}?lang=en`);
     const text = await response.text();
@@ -87,7 +86,14 @@ const getip = async domain => {
     return 'fail' == json.status ? 'registrable' : json.query;
 };
 
-chrome.webRequest.onErrorOccurred.addListener(async details=>{
+let tlds;
+gettlds(SUFFIXURL);
+
+const count = setInterval(() => {
+    tlds ? clearInterval(count) : gettlds(SUFFIXURL);
+}, 5000);
+
+chrome.webRequest.onErrorOccurred.addListener(async details => {
         const url = details.url;
         // Ignore chrome's initial request for search keywords
         if(!/ERR_NAME_NOT_RESOLVED/.test(details.error) || /\s/ui.test(url) || -1 == url.indexOf('.')) return;
@@ -116,7 +122,7 @@ chrome.webRequest.onErrorOccurred.addListener(async details=>{
             `);
         }
     },
-    { urls: ["<all_urls>" ] }
+    { urls: ["<all_urls>"] }
 );
 
 chrome.notifications.onClicked.addListener(id => {
