@@ -94,11 +94,12 @@ const count = setInterval(() => {
 }, 5000);
 
 chrome.webRequest.onErrorOccurred.addListener(async details => {
-        const url = details.url;
         // Ignore chrome's initial request for search keywords
-        if(!/ERR_NAME_NOT_RESOLVED/.test(details.error) || /\s/ui.test(url) || -1 == url.indexOf('.')) return;
+        if(/INTERNET_DISCONNECTED|DNS_TIMED_OUT/.test(details.error)) return; // HOST_RESOLVER_QUEUE_TOO_LARGE
+        if(!/NAME_NOT_RESOLVED/.test(details.error) || -1 == details.url.indexOf('.')) return;  // NAME_RESOLUTION_FAILED
         
         let root;
+        const url = details.url;
         const domain = new URL(url).hostname;
         TLDEXTRACT.extract(url, (err, obj) => {
             if(!err){
