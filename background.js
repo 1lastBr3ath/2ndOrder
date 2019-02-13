@@ -79,19 +79,17 @@ const gettlds = async url => {
     tlds = text.split('\n');
 };
 
-const getip = async domain => {
-    const response = await fetch(`http://ip-api.com/json/${domain}?lang=en`);
-    const text = await response.text();
-    const json = JSON.parse(text);
-    return 'fail' == json.status ? 'registrable' : json.query;
-};
+//const getip = async domain => {
+//    const response = await fetch(`http://ip-api.com/json/${domain}?lang=en`);
+//    const json = await response.json()
+//    return 'fail' == json.status ? 'registrable' : json.query;
+//};
 
-let tlds;
-gettlds(SUFFIXURL);
-
-const count = setInterval(() => {
-    tlds ? clearInterval(count) : gettlds(SUFFIXURL);
-}, 5000);
+const checkdomain = async domain => {
+    const response = await fetch('https://cm2.pw/nccheck',{method:'POST',body:'domain='+domain,headers:{'Content-type':'application/x-www-form-urlencoded'}});
+    const json = await response.json();
+    return 'true' == json.available ? json : false;
+}
 
 chrome.webRequest.onErrorOccurred.addListener(async details => {
         // Ignore chrome's initial request for search keywords
@@ -101,31 +99,41 @@ chrome.webRequest.onErrorOccurred.addListener(async details => {
         let root;
         const url = details.url;
         const domain = new URL(url).hostname;
+
         TLDEXTRACT.extract(url, (err, obj) => {
-            if(!err){
-                root = obj.domain + '.' + obj.tld;
-            }
+            if(!err) root = obj.domain + '.' + obj.tld;
         });
+
+        const registrable = await checkdomain(root);
+        if(!registrable) return;
+
         chrome.notifications.create({
-                type: "basic",
                 priority: 2,
-                //requireInteraction: true,
-                title: "DNS resolution failure",
-                message: `Domain: ${domain}`,
-                iconUrl: 'http://cm2.pw/favicon.ico'
+                type    : 'basic',
+                message : `Domain: ${domain}`,
+                title   : 'REGistrable domain in use',
+                iconUrl : 'http://cm2.pw/favicon.ico'
         });
         if(prompt(details.error, url)){
             window.open('about:blank').document.write(`
                     <strong>URL:</strong> ${url}<br/>
                     <strong>Domain:</strong> ${domain}<br/>
-                    <strong>Root domain:</strong> ${root} (${await getip(root)})<br/>
-                    <strong>Origin:</strong> ${details.initiator}<br/>
+                    <strong>ROOT Domain:</strong> ${root} (${details.ip||''})<br/>
+                    <strong>Origin:</strong> ${details.initiator||''}<br/>
+                    <strong>Other:</strong> ${JSON.stringify(registrable)}
             `);
         }
     },
-    { urls: ["<all_urls>"] }
+    { urls: ['<all_urls>'] }
 );
 
 chrome.notifications.onClicked.addListener(id => {
     chrome.notifications.clear(id);
 });
+
+let tlds;
+gettlds(SUFFIXURL);
+
+const count = setInterval(() => {
+    tlds ? clearInterval(count) : gettlds(SUFFIXURL);
+}, 5000);

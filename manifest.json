@@ -1,7 +1,7 @@
 {
-  "name": "2nd Order Subdomain Hijacking",
-  "version": "0.1",
-  "description": "Inspect and find domains that don't resolve or have expired (parked)",
+  "name": "H2O",
+  "version": "0.1.1",
+  "description": "Inspect and find domains that don't resolve or have expired (parked) i.e. 2nd Order Subdomain Hijacking",
   "permissions": [
     "webRequest",
     "notifications",
